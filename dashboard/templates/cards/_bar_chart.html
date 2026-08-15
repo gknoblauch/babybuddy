@@ -1,0 +1,25 @@
+{% comment %}
+Compact 7-day bar chart for the "recent" dashboard cards.
+Expects `chart` (a list of daily dicts with `date`, `total` and `count`,
+ordered oldest to newest) and `chart_max` (the largest total, for scaling).
+{% endcomment %}
+{% load i18n %}
+<div class="d-flex align-items-end justify-content-between mt-2"
+     style="height: 80px;
+            gap: 3px">
+    {% for day in chart %}
+        <div class="d-flex flex-column justify-content-end flex-fill h-100"
+             title="{{ day.date|date:'D, N j' }} — {{ day.total|floatformat }}{% if day.count %} ({{ day.count }}){% endif %}">
+            <div class="rounded-top bg-primary{% if not forloop.last %} opacity-50{% endif %}"
+                 style="height: {% if chart_max %}{% widthratio day.total chart_max 100 %}{% else %}0{% endif %}%;
+                        min-height: 2px"></div>
+        </div>
+    {% endfor %}
+</div>
+<div class="d-flex justify-content-between text-body-secondary"
+     style="gap: 3px;
+            font-size: 0.7rem">
+    {% for day in chart %}
+        <div class="flex-fill text-center{% if forloop.last %} fw-bold{% endif %}">{{ day.date|date:'D'|slice:':1' }}</div>
+    {% endfor %}
+</div>

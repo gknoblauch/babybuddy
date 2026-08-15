@@ -215,8 +215,12 @@ def card_feeding_recent(context, child, end_date=None):
         result["total"] += instance.amount if instance.amount is not None else 0
         result["count"] += 1
 
+    chart, chart_max = _recent_chart(results)
+
     return {
         "feedings": results,
+        "chart": chart,
+        "chart_max": chart_max,
         "type": "feeding",
         "empty": len(instances) == 0,
         "hide_empty": _hide_empty(context),
@@ -294,6 +298,19 @@ def card_pumping_last(context, child):
     }
 
 
+def _recent_chart(results):
+    """
+    Prepares the daily totals from a "recent" card for a simple bar chart:
+    the most recent seven days ordered oldest to newest, with the largest
+    total for scaling bar heights.
+    :param results: a newest-first list of dicts with a "total" key.
+    :returns: a tuple of (chart_days, chart_max).
+    """
+    chart = list(reversed(results[:7]))
+    chart_max = max((day["total"] for day in chart), default=0)
+    return chart, chart_max
+
+
 @register.inclusion_tag("cards/pumping_recent.html", takes_context=True)
 def card_pumping_recent(context, child, end_date=None):
     """
@@ -324,9 +341,106 @@ def card_pumping_recent(context, child, end_date=None):
         result["total"] += instance.amount if instance.amount is not None else 0
         result["count"] += 1
 
+    chart, chart_max = _recent_chart(results)
+
     return {
         "pumpings": results,
+        "chart": chart,
+        "chart_max": chart_max,
         "type": "pumping",
+        "empty": len(instances) == 0,
+        "hide_empty": _hide_empty(context),
+    }
+
+
+@register.inclusion_tag("cards/pumping_24hours.html", takes_context=True)
+def card_pumping_24hours(context, child):
+    """
+    Summarizes pumping over the last 24 hours (rolling) and since midnight
+    (today), reporting the total amount pumped and total time spent pumping,
+    and compares the last 24 hours against the 24 hours before that.
+    :param child: an instance of the Child model.
+    :returns: a dict with rolling 24 hour, since-midnight and comparison data.
+    """
+    now = timezone.localtime()
+
+    def summarize(start, end):
+        instances = models.Pumping.objects.filter(
+            child=child, start__gte=start, start__lt=end
+        )
+        totals = instances.aggregate(amount=Sum("amount"), duration=Sum("duration"))
+        return {
+            "amount": totals["amount"] or 0,
+            "duration": totals["duration"] or timezone.timedelta(),
+            "count": instances.count(),
+        }
+
+    day = timezone.timedelta(hours=24)
+    rolling = summarize(now - day, now + timezone.timedelta(seconds=1))
+    previous = summarize(now - 2 * day, now - day)
+    today = summarize(
+        now.replace(hour=0, minute=0, second=0, microsecond=0),
+        now + timezone.timedelta(seconds=1),
+    )
+
+    return {
+        "type": "pumping",
+        "rolling": rolling,
+        "previous": previous,
+        "change": rolling["amount"] - previous["amount"],
+        "change_abs": abs(rolling["amount"] - previous["amount"]),
+        "today": today,
+        "empty": rolling["count"] == 0 and today["count"] == 0,
+        "hide_empty": _hide_empty(context),
+    }
+
+
+@register.inclusion_tag("cards/feeding_24hours.html", takes_context=True)
+def card_feeding_24hours(context, child):
+    """
+    Summarizes what a child has been fed over the last 24 hours (rolling):
+    total amount and feeding count, a breakdown by feeding type, and total
+    nursing sessions and time (nursing has no recorded amount).
+    :param child: an instance of the Child model.
+    :returns: a dict with 24 hour feeding totals and a per-type breakdown.
+    """
+    now = timezone.localtime()
+    start = now - timezone.timedelta(hours=24)
+
+    instances = models.Feeding.objects.filter(
+        child=child, start__gte=start, start__lte=now
+    ).order_by("start")
+
+    types = collections.OrderedDict()
+    total_amount = 0.0
+    nursing_count = 0
+    nursing_duration = timezone.timedelta()
+
+    for instance in instances:
+        amount = instance.amount or 0
+        total_amount += amount
+
+        if instance.type not in types:
+            types[instance.type] = {
+                "label": instance.get_type_display(),
+                "amount": 0.0,
+                "count": 0,
+            }
+        types[instance.type]["amount"] += amount
+        types[instance.type]["count"] += 1
+
+        if instance.method in ("left breast", "right breast", "both breasts"):
+            nursing_count += 1
+            if instance.duration:
+                nursing_duration += instance.duration
+
+    return {
+        "type": "feeding",
+        "total_amount": total_amount,
+        "count": len(instances),
+        "types": list(types.values()),
+        "nursing_count": nursing_count,
+        "nursing_duration": nursing_duration,
         "empty": len(instances) == 0,
         "hide_empty": _hide_empty(context),
     }

@@ -175,6 +175,11 @@ class TemplateTagsTestCase(TestCase):
         self.assertEqual(data["feedings"][-1]["total"], 20.0)
         self.assertEqual(data["feedings"][-1]["count"], 2)
 
+        # Bar chart: 7 days, oldest first, newest (today) last.
+        self.assertEqual(len(data["chart"]), 7)
+        self.assertEqual(data["chart"][-1], data["feedings"][0])
+        self.assertEqual(data["chart_max"], max(d["total"] for d in data["chart"]))
+
     def test_card_feeding_last(self):
         data = cards.card_feeding_last(self.context, self.child)
         self.assertEqual(data["type"], "feeding")
@@ -224,12 +229,126 @@ class TemplateTagsTestCase(TestCase):
         self.assertEqual(data["pumpings"][0]["total"], 0)
         self.assertEqual(data["pumpings"][0]["count"], 0)
 
+        # Bar chart: 7 days, oldest first, newest (today) last.
+        self.assertEqual(len(data["chart"]), 7)
+        self.assertEqual(data["chart"][-1], data["pumpings"][0])
+        self.assertEqual(data["chart_max"], max(d["total"] for d in data["chart"]))
+
     def test_card_pumping_recent_empty(self):
         models.Pumping.objects.all().delete()
         data = cards.card_pumping_recent(self.context, self.child, self.date)
         self.assertEqual(data["type"], "pumping")
         self.assertTrue(data["empty"])
         self.assertFalse(data["hide_empty"])
+
+    def test_card_pumping_24hours(self):
+        now = timezone.localtime()
+        # Within the last 24 hours: 3 hours ago and 20 hours ago.
+        models.Pumping.objects.create(
+            child=self.child,
+            start=now - timezone.timedelta(hours=3, minutes=15),
+            end=now - timezone.timedelta(hours=3),
+            amount=100,
+        )
+        models.Pumping.objects.create(
+            child=self.child,
+            start=now - timezone.timedelta(hours=20, minutes=10),
+            end=now - timezone.timedelta(hours=20),
+            amount=60,
+        )
+        # Outside the last 24 hours but within the previous 24 hours (24-48h
+        # ago): counts toward the comparison, not the rolling total.
+        models.Pumping.objects.create(
+            child=self.child,
+            start=now - timezone.timedelta(hours=30),
+            end=now - timezone.timedelta(hours=29, minutes=45),
+            amount=200,
+        )
+
+        data = cards.card_pumping_24hours(self.context, self.child)
+        self.assertEqual(data["type"], "pumping")
+        self.assertFalse(data["empty"])
+        self.assertFalse(data["hide_empty"])
+
+        self.assertEqual(data["rolling"]["count"], 2)
+        self.assertEqual(data["rolling"]["amount"], 160)
+        self.assertEqual(data["rolling"]["duration"], timezone.timedelta(minutes=25))
+
+        # Comparison against the previous 24 hours.
+        self.assertEqual(data["previous"]["count"], 1)
+        self.assertEqual(data["previous"]["amount"], 200)
+        self.assertEqual(data["change"], -40)
+        self.assertEqual(data["change_abs"], 40)
+
+    def test_card_pumping_24hours_empty(self):
+        models.Pumping.objects.all().delete()
+        data = cards.card_pumping_24hours(self.context, self.child)
+        self.assertEqual(data["type"], "pumping")
+        self.assertTrue(data["empty"])
+        self.assertEqual(data["rolling"]["count"], 0)
+        self.assertEqual(data["rolling"]["amount"], 0)
+        self.assertEqual(data["rolling"]["duration"], timezone.timedelta())
+
+    def test_card_feeding_24hours(self):
+        now = timezone.localtime()
+        models.Feeding.objects.create(
+            child=self.child,
+            start=now - timezone.timedelta(hours=2, minutes=10),
+            end=now - timezone.timedelta(hours=2),
+            type="breast milk",
+            method="bottle",
+            amount=90,
+        )
+        models.Feeding.objects.create(
+            child=self.child,
+            start=now - timezone.timedelta(hours=5, minutes=10),
+            end=now - timezone.timedelta(hours=5),
+            type="formula",
+            method="bottle",
+            amount=120,
+        )
+        # Nursing session: no amount, has duration.
+        models.Feeding.objects.create(
+            child=self.child,
+            start=now - timezone.timedelta(hours=8, minutes=20),
+            end=now - timezone.timedelta(hours=8),
+            type="breast milk",
+            method="both breasts",
+        )
+        # Outside the last 24 hours: excluded.
+        models.Feeding.objects.create(
+            child=self.child,
+            start=now - timezone.timedelta(hours=30),
+            end=now - timezone.timedelta(hours=29, minutes=50),
+            type="formula",
+            method="bottle",
+            amount=999,
+        )
+
+        data = cards.card_feeding_24hours(self.context, self.child)
+        self.assertEqual(data["type"], "feeding")
+        self.assertFalse(data["empty"])
+        self.assertFalse(data["hide_empty"])
+
+        self.assertEqual(data["count"], 3)
+        self.assertEqual(data["total_amount"], 210)
+        self.assertEqual(data["nursing_count"], 1)
+        self.assertEqual(data["nursing_duration"], timezone.timedelta(minutes=20))
+
+        types = {t["label"]: t for t in data["types"]}
+        self.assertEqual(types["Breast milk"]["amount"], 90)
+        self.assertEqual(types["Breast milk"]["count"], 2)
+        self.assertEqual(types["Formula"]["amount"], 120)
+        self.assertEqual(types["Formula"]["count"], 1)
+
+    def test_card_feeding_24hours_empty(self):
+        models.Feeding.objects.all().delete()
+        data = cards.card_feeding_24hours(self.context, self.child)
+        self.assertEqual(data["type"], "feeding")
+        self.assertTrue(data["empty"])
+        self.assertEqual(data["count"], 0)
+        self.assertEqual(data["total_amount"], 0)
+        self.assertEqual(data["types"], [])
 
     def test_card_sleep_last(self):
         data = cards.card_sleep_last(self.context, self.child)

@@ -1,0 +1,55 @@
+{% extends 'cards/base.html' %}
+{% load duration i18n %}
+{% block header %}
+    <a href="{% url "core:pumping-list" %}">{% trans "Pumping (last 24 hours)" %}</a>
+{% endblock %}
+{% block title %}
+    {% if rolling.count > 0 %}
+        {{ rolling.amount|floatformat }}
+    {% else %}
+        {% trans "None" %}
+    {% endif %}
+{% endblock %}
+{% block content %}
+    {% if rolling.count > 0 %}
+        <div>
+            {% blocktrans trimmed with time=rolling.duration|duration_string %}
+                {{ time }} spent pumping
+            {% endblocktrans %}
+        </div>
+        <div class="small text-body-secondary">
+            {% blocktrans trimmed count counter=rolling.count %}
+                {{ counter }} session in the last 24 hours
+            {% plural %}
+                {{ counter }} sessions in the last 24 hours
+            {% endblocktrans %}
+        </div>
+        {% if previous.count > 0 %}
+            <div class="small mt-1">
+                {% if change > 0 %}
+                    <span class="text-success">&#9650; {{ change_abs|floatformat }}</span>
+                    {% trans "more than previous 24h" %}
+                {% elif change < 0 %}
+                    <span class="text-danger">&#9660; {{ change_abs|floatformat }}</span>
+                    {% trans "less than previous 24h" %}
+                {% else %}
+                    {% trans "Same as previous 24h" %}
+                {% endif %}
+            </div>
+        {% endif %}
+    {% endif %}
+{% endblock %}
+{% block listgroup %}
+    <ul class="list-group list-group-flush text-body-secondary small">
+        <li class="list-group-item d-flex justify-content-between">
+            <span>{% trans "Since midnight" %}</span>
+            <span>
+                {% if today.count > 0 %}
+                    {{ today.amount|floatformat }} &middot; {{ today.duration|duration_string }}
+                {% else %}
+                    {% trans "None" %}
+                {% endif %}
+            </span>
+        </li>
+    </ul>
+{% endblock %}
