@@ -350,6 +350,23 @@ class TemplateTagsTestCase(TestCase):
         self.assertEqual(data["total_amount"], 0)
         self.assertEqual(data["types"], [])
 
+    def test_dashboard_card_order_default(self):
+        from types import SimpleNamespace
+
+        settings = SimpleNamespace(dashboard_cards=None)
+        order = cards._dashboard_card_order(settings)
+        self.assertEqual(order, [key for key, _label in cards.DASHBOARD_CARDS])
+
+    def test_dashboard_card_order_custom(self):
+        from types import SimpleNamespace
+
+        # Saved order is honored and unknown keys are dropped.
+        settings = SimpleNamespace(
+            dashboard_cards=["pumping_24hours", "feeding_last", "bogus_card"]
+        )
+        order = cards._dashboard_card_order(settings)
+        self.assertEqual(order, ["pumping_24hours", "feeding_last"])
+
     def test_card_sleep_last(self):
         data = cards.card_sleep_last(self.context, self.child)
         self.assertEqual(data["type"], "sleep")

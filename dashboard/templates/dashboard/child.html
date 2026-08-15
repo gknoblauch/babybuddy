@@ -14,23 +14,10 @@
     <div id="dashboard-child"
          class="row"
          data-masonry='{"percentPosition": true }'>
-        <div class="col-sm-6 col-lg-4">{% card_timer_list object %}</div>
-        <div class="col-sm-6 col-lg-4">{% card_feeding_last object %}</div>
-        <div class="col-sm-6 col-lg-4">{% card_feeding_24hours object %}</div>
-        <div class="col-sm-6 col-lg-4">{% card_diaperchange_last object %}</div>
-        <div class="col-sm-6 col-lg-4">{% card_pumping_last object %}</div>
-        <div class="col-sm-6 col-lg-4">{% card_pumping_24hours object %}</div>
-        <div class="col-sm-6 col-lg-4">{% card_pumping_recent object %}</div>
-        <div class="col-sm-6 col-lg-4">{% card_sleep_last object %}</div>
-        <div class="col-sm-6 col-lg-4">{% card_medication_last object %}</div>
-        <div class="col-sm-6 col-lg-4">{% card_feeding_last_method object %}</div>
-        <div class="col-sm-6 col-lg-4">{% card_feeding_recent object %}</div>
-        <div class="col-sm-6 col-lg-4">{% card_statistics object %}</div>
-        <div class="col-sm-6 col-lg-4">{% card_sleep_recent object %}</div>
-        <div class="col-sm-6 col-lg-4">{% card_sleep_naps_day object %}</div>
-        <div class="col-sm-6 col-lg-4">{% card_tummytime_day object %}</div>
-        <div class="col-sm-6 col-lg-4">{% card_diaperchange_types object %}</div>
-        <div class="col-sm-6 col-lg-4">{% card_breastfeeding object %}</div>
+        {% dashboard_card_order as card_keys %}
+        {% for key in card_keys %}
+            <div class="col-sm-6 col-lg-4">{% include "cards/_dispatch.html" with key=key %}</div>
+        {% endfor %}
     </div>
 {% endblock %}
 {% block javascript %}

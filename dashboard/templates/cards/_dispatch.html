@@ -1,0 +1,42 @@
+{% comment %}
+Renders a single dashboard card by key. Included once per card with the loop's
+`key` and the dashboard `object` (child) in context; keeps child.html driven by
+the user's card selection instead of a hardcoded list. Keys match
+DASHBOARD_CARDS in dashboard/templatetags/cards.py.
+{% endcomment %}
+{% load cards %}
+{% if key == "timer_list" %}
+    {% card_timer_list object %}
+{% elif key == "feeding_last" %}
+    {% card_feeding_last object %}
+{% elif key == "feeding_24hours" %}
+    {% card_feeding_24hours object %}
+{% elif key == "diaperchange_last" %}
+    {% card_diaperchange_last object %}
+{% elif key == "pumping_last" %}
+    {% card_pumping_last object %}
+{% elif key == "pumping_24hours" %}
+    {% card_pumping_24hours object %}
+{% elif key == "pumping_recent" %}
+    {% card_pumping_recent object %}
+{% elif key == "sleep_last" %}
+    {% card_sleep_last object %}
+{% elif key == "medication_last" %}
+    {% card_medication_last object %}
+{% elif key == "feeding_last_method" %}
+    {% card_feeding_last_method object %}
+{% elif key == "feeding_recent" %}
+    {% card_feeding_recent object %}
+{% elif key == "statistics" %}
+    {% card_statistics object %}
+{% elif key == "sleep_recent" %}
+    {% card_sleep_recent object %}
+{% elif key == "sleep_naps_day" %}
+    {% card_sleep_naps_day object %}
+{% elif key == "tummytime_day" %}
+    {% card_tummytime_day object %}
+{% elif key == "diaperchange_types" %}
+    {% card_diaperchange_types object %}
+{% elif key == "breastfeeding" %}
+    {% card_breastfeeding object %}
+{% endif %}

@@ -79,13 +79,31 @@ class UserPasswordForm(PasswordChangeForm):
 
 
 class UserSettingsForm(forms.ModelForm):
+    dashboard_cards = forms.MultipleChoiceField(
+        required=False,
+        widget=forms.CheckboxSelectMultiple(attrs={"class": "form-check-input"}),
+        label=_("Dashboard cards"),
+        help_text=_("Choose which cards appear on the dashboard."),
+    )
+
     class Meta:
         model = Settings
         fields = [
             "dashboard_refresh_rate",
             "dashboard_hide_empty",
             "dashboard_hide_age",
+            "dashboard_cards",
             "language",
             "timezone",
             "pagination_count",
         ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Populate the card picker from the canonical card list, defaulting to
+        # everything selected when the user has not customized their dashboard.
+        from dashboard.templatetags.cards import DASHBOARD_CARDS
+
+        self.fields["dashboard_cards"].choices = DASHBOARD_CARDS
+        if self.instance and self.instance.dashboard_cards is None:
+            self.initial["dashboard_cards"] = [key for key, _label in DASHBOARD_CARDS]

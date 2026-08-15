@@ -13,6 +13,56 @@ from core.templatetags.misc import feeding_time_diff_base
 register = template.Library()
 
 
+# Canonical list of dashboard cards in their default display order. Each entry
+# is (key, label); the key matches the `{% card_<key> %}` inclusion tag and the
+# branch in cards/_dispatch.html. Used to build the settings picker and to
+# resolve which cards a user has chosen to display.
+DASHBOARD_CARDS = [
+    ("timer_list", _("Timers")),
+    ("feeding_last", _("Last Feeding")),
+    ("feeding_24hours", _("Fed (last 24 hours)")),
+    ("diaperchange_last", _("Last Diaper Change")),
+    ("pumping_last", _("Last Pumping")),
+    ("pumping_24hours", _("Pumping (last 24 hours)")),
+    ("pumping_recent", _("Recent Pumping")),
+    ("sleep_last", _("Last Sleep")),
+    ("medication_last", _("Last Medication")),
+    ("feeding_last_method", _("Last Feeding Method")),
+    ("feeding_recent", _("Recent Feedings")),
+    ("statistics", _("Statistics")),
+    ("sleep_recent", _("Sleep")),
+    ("sleep_naps_day", _("Today's Naps")),
+    ("tummytime_day", _("Today's Tummy Time")),
+    ("diaperchange_types", _("Diaper Changes")),
+    ("breastfeeding", _("Breastfeeding")),
+]
+
+
+def _dashboard_card_order(settings):
+    """
+    Resolves the ordered list of dashboard card keys to display for a user.
+    An unset (None) `dashboard_cards` setting means "show everything" in the
+    default order; otherwise the saved selection is honored, filtered to keys
+    that still exist.
+    :param settings: a user's Settings instance.
+    :returns: a list of card keys to render, in order.
+    """
+    canonical = [key for key, _label in DASHBOARD_CARDS]
+    saved = getattr(settings, "dashboard_cards", None)
+    if not saved:
+        return canonical
+    valid = set(canonical)
+    return [key for key in saved if key in valid]
+
+
+@register.simple_tag(takes_context=True)
+def dashboard_card_order(context):
+    """
+    Returns the ordered dashboard card keys for the requesting user.
+    """
+    return _dashboard_card_order(context["request"].user.settings)
+
+
 def _hide_empty(context):
     return context["request"].user.settings.dashboard_hide_empty
 

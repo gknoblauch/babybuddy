@@ -71,6 +71,13 @@ class Settings(models.Model):
     dashboard_hide_empty = models.BooleanField(
         verbose_name=_("Hide Empty Dashboard Cards"), default=False, editable=True
     )
+    dashboard_cards = models.JSONField(
+        verbose_name=_("Dashboard cards"),
+        help_text=_("Select which cards to show on the dashboard, in order."),
+        blank=True,
+        null=True,
+        default=None,
+    )
     dashboard_hide_age = models.DurationField(
         verbose_name=_("Hide data older than"),
         help_text=_(
