@@ -241,6 +241,42 @@ class TemplateTagsTestCase(TestCase):
         self.assertTrue(data["empty"])
         self.assertFalse(data["hide_empty"])
 
+    def test_card_feeding_pumping_recent(self):
+        data = cards.card_feeding_pumping_recent(self.context, self.child, self.date)
+        self.assertEqual(data["type"], "feeding")
+        self.assertFalse(data["empty"])
+        self.assertFalse(data["hide_empty"])
+
+        # 7 days of per-day rows, newest first.
+        self.assertEqual(len(data["days"]), 7)
+        self.assertEqual(data["today"], data["days"][0])
+
+        # Today (2017-11-18): fed 2.5 from 3 feedings, no pumping.
+        self.assertEqual(data["days"][0]["fed"], 2.5)
+        self.assertEqual(data["days"][0]["pumped"], 0)
+        self.assertEqual(data["days"][0]["diff"], -2.5)
+
+        # Yesterday (2017-11-17): fed 0.25, pumped 14.0 (5.0 + 9.0).
+        self.assertEqual(data["days"][1]["fed"], 0.25)
+        self.assertEqual(data["days"][1]["pumped"], 14.0)
+        self.assertEqual(data["days"][1]["diff"], 13.75)
+
+        # Chart reads oldest -> newest and is scaled by the largest amount.
+        self.assertEqual(len(data["chart"]), 7)
+        self.assertEqual(data["chart"][-1], data["days"][0])
+        self.assertEqual(
+            data["chart_max"],
+            max(max(d["fed"], d["pumped"]) for d in data["chart"]),
+        )
+
+    def test_card_feeding_pumping_recent_empty(self):
+        models.Feeding.objects.all().delete()
+        models.Pumping.objects.all().delete()
+        data = cards.card_feeding_pumping_recent(self.context, self.child, self.date)
+        self.assertEqual(data["type"], "feeding")
+        self.assertTrue(data["empty"])
+        self.assertFalse(data["hide_empty"])
+
     def test_card_pumping_24hours(self):
         now = timezone.localtime()
         # Within the last 24 hours: 3 hours ago and 20 hours ago.

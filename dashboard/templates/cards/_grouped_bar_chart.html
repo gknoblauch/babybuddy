@@ -1,0 +1,32 @@
+{% comment %}
+Compact 7-day grouped bar chart comparing two daily amounts.
+Expects `chart` (a list of daily dicts with `date`, `fed` and `pumped`,
+ordered oldest to newest) and `chart_max` (the largest single amount, for
+scaling). Fed bars use the primary color, pumped bars use info.
+{% endcomment %}
+{% load i18n %}
+<div class="d-flex align-items-end justify-content-between mt-2"
+     style="height: 80px;
+            gap: 5px">
+    {% for day in chart %}
+        <div class="d-flex align-items-end justify-content-center flex-fill h-100"
+             style="gap: 2px"
+             title="{{ day.date|date:'D, N j' }} — {% trans 'Fed' %} {{ day.fed|floatformat }} · {% trans 'Pumped' %} {{ day.pumped|floatformat }} · {% trans 'Diff' %} {{ day.diff|floatformat }}">
+            <div class="rounded-top bg-primary{% if not forloop.last %} opacity-50{% endif %}"
+                 style="width: 45%;
+                        height: {% if chart_max %}{% widthratio day.fed chart_max 100 %}{% else %}0{% endif %}%;
+                        min-height: 2px"></div>
+            <div class="rounded-top bg-info{% if not forloop.last %} opacity-50{% endif %}"
+                 style="width: 45%;
+                        height: {% if chart_max %}{% widthratio day.pumped chart_max 100 %}{% else %}0{% endif %}%;
+                        min-height: 2px"></div>
+        </div>
+    {% endfor %}
+</div>
+<div class="d-flex justify-content-between text-body-secondary"
+     style="gap: 5px;
+            font-size: 0.7rem">
+    {% for day in chart %}
+        <div class="flex-fill text-center{% if forloop.last %} fw-bold{% endif %}">{{ day.date|date:'D'|slice:':1' }}</div>
+    {% endfor %}
+</div>

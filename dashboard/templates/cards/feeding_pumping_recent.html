@@ -1,0 +1,62 @@
+{% extends "cards/base.html" %}
+{% load duration i18n %}
+{% block header %}
+    <a href="{% url "core:feeding-list" %}">{% trans "Feeding vs Pumping" %}</a>
+{% endblock %}
+{% block title %}
+    {% if not empty %}
+        {% if today.diff > 0 %}
+            <span class="text-success">+{{ today.diff|floatformat }}</span>
+        {% elif today.diff < 0 %}
+            <span class="text-danger">{{ today.diff|floatformat }}</span>
+        {% else %}
+            {{ today.diff|floatformat }}
+        {% endif %}
+    {% else %}
+        {% trans "None" %}
+    {% endif %}
+{% endblock %}
+{% block content %}
+    {% if not empty %}
+        <div class="small">
+            {% blocktrans trimmed with fed=today.fed|floatformat pumped=today.pumped|floatformat %}
+                Fed {{ fed }} · Pumped {{ pumped }} today
+            {% endblocktrans %}
+        </div>
+        <div class="small text-body-secondary">{% trans "Diff is pumped minus fed" %}</div>
+        {% include "cards/_grouped_bar_chart.html" %}
+        <div class="d-flex justify-content-center mt-2 small text-body-secondary"
+             style="gap: 1rem">
+            <span class="d-inline-flex align-items-center" style="gap: 0.35rem">
+                <span class="badge bg-primary p-1">&nbsp;</span>{% trans "Fed" %}
+            </span>
+            <span class="d-inline-flex align-items-center" style="gap: 0.35rem">
+                <span class="badge bg-info p-1">&nbsp;</span>{% trans "Pumped" %}
+            </span>
+        </div>
+    {% else %}
+        {% trans "None" %}
+    {% endif %}
+{% endblock %}
+{% block listgroup %}
+    {% if not empty %}
+        <ul class="list-group list-group-flush small">
+            {% for day in days %}
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="text-body-secondary">{{ day.date|date:'D, N j' }}</span>
+                    <span>
+                        {{ day.fed|floatformat }} / {{ day.pumped|floatformat }}
+                        &middot;
+                        {% if day.diff > 0 %}
+                            <span class="text-success">+{{ day.diff|floatformat }}</span>
+                        {% elif day.diff < 0 %}
+                            <span class="text-danger">{{ day.diff|floatformat }}</span>
+                        {% else %}
+                            {{ day.diff|floatformat }}
+                        {% endif %}
+                    </span>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}

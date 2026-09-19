@@ -455,6 +455,69 @@ def card_feeding_24hours(context, child):
     }
 
 
+@register.inclusion_tag("cards/feeding_pumping_recent.html", takes_context=True)
+def card_feeding_pumping_recent(context, child, end_date=None):
+    """
+    Compares daily feeding and pumping totals over the last 7 days so the
+    surplus or deficit (pumped minus fed) for each day is visible alongside
+    a grouped bar chart of the two amounts.
+    :param child: an instance of the Child model.
+    :param end_date: a Date object for the most recent day to include.
+    :returns: a dict with per-day fed/pumped/diff values and chart data.
+    """
+    if not end_date:
+        end_date = timezone.localtime()
+
+    # push end_date to the very end of that day and grab a full 8 days so the
+    # oldest displayed day (index 7) is complete
+    end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=9999)
+    start_date = end_date - timezone.timedelta(days=8)
+
+    def daily_totals(model):
+        # newest-first daily amount totals, index 0 == end_date
+        totals = [0] * 8
+        instances = model.objects.filter(child=child).filter(
+            start__range=[start_date, end_date]
+        )
+        for instance in instances:
+            local_date = timezone.localtime(instance.end).replace(
+                hour=23, minute=59, second=59, microsecond=9999
+            )
+            idx = (end_date - local_date).days
+            if 0 <= idx < len(totals):
+                totals[idx] += instance.amount if instance.amount is not None else 0
+        return totals
+
+    fed = daily_totals(models.Feeding)
+    pumped = daily_totals(models.Pumping)
+    dates = [end_date - timezone.timedelta(days=i) for i in range(8)]
+
+    # per-day rows, newest first, for the most recent 7 days
+    days = [
+        {
+            "date": dates[i],
+            "fed": fed[i],
+            "pumped": pumped[i],
+            "diff": pumped[i] - fed[i],
+        }
+        for i in range(7)
+    ]
+
+    # chart reads left-to-right, oldest to newest
+    chart = list(reversed(days))
+    chart_max = max((max(d["fed"], d["pumped"]) for d in chart), default=0)
+
+    return {
+        "type": "feeding",
+        "today": days[0],
+        "days": days,
+        "chart": chart,
+        "chart_max": chart_max,
+        "empty": not any(d["fed"] or d["pumped"] for d in days),
+        "hide_empty": _hide_empty(context),
+    }
+
+
 @register.inclusion_tag("cards/sleep_last.html", takes_context=True)
 def card_sleep_last(context, child):
     """
