@@ -1,0 +1,53 @@
+{% extends 'cards/base.html' %}
+{% load duration i18n %}
+{% block header %}
+    <a href="{% url "core:feeding-list" %}">{% trans "Fed (last 24 hours)" %}</a>
+{% endblock %}
+{% block title %}
+    {% if count > 0 %}
+        {% blocktrans trimmed count counter=count %}
+            {{ counter }} feeding
+        {% plural %}
+            {{ counter }} feedings
+        {% endblocktrans %}
+    {% else %}
+        {% trans "None" %}
+    {% endif %}
+{% endblock %}
+{% block content %}
+    {% if total_amount %}
+        <div>
+            {% blocktrans trimmed with amount=total_amount|floatformat %}
+                {{ amount }} total
+            {% endblocktrans %}
+        </div>
+    {% endif %}
+    {% if nursing_count %}
+        <div class="small text-body-secondary">
+            {% blocktrans trimmed with time=nursing_duration|duration_string count counter=nursing_count %}
+                {{ counter }} nursing session, {{ time }}
+            {% plural %}
+                {{ counter }} nursing sessions, {{ time }}
+            {% endblocktrans %}
+        </div>
+    {% endif %}
+{% endblock %}
+{% block listgroup %}
+    {% if types %}
+        <ul class="list-group list-group-flush text-body-secondary small">
+            {% for t in types %}
+                <li class="list-group-item d-flex justify-content-between">
+                    <span>{{ t.label }}</span>
+                    <span>
+                        {% if t.amount %}{{ t.amount|floatformat }} &middot;{% endif %}
+                        {% blocktrans trimmed count counter=t.count %}
+                            {{ counter }} feeding
+                        {% plural %}
+                            {{ counter }} feedings
+                        {% endblocktrans %}
+                    </span>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}

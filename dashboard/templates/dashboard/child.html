@@ -19,6 +19,7 @@
         {% endif %}
         {% if perms.core.view_feeding %}
             <div class="col-sm-6 col-lg-4">{% card_feeding_last object %}</div>
+            <div class="col-sm-6 col-lg-4">{% card_feeding_24hours object %}</div>
         {% endif %}
         {% if perms.core.view_note %}
             <div class="col-sm-6 col-lg-4">{% card_notes_recent object %}</div>
@@ -28,6 +29,7 @@
         {% endif %}
         {% if perms.core.view_pumping %}
             <div class="col-sm-6 col-lg-4">{% card_pumping_last object %}</div>
+            <div class="col-sm-6 col-lg-4">{% card_pumping_24hours object %}</div>
             <div class="col-sm-6 col-lg-4">{% card_pumping_recent object %}</div>
         {% endif %}
         {% if perms.core.view_sleep %}
